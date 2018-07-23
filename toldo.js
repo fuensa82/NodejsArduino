@@ -60,5 +60,4 @@ app.get('/paraToldo',function(req, res){
 app.get('*',function(req, res){
     console.log("Resto");
     res.json({resp:"Orden no reconocida"});
- 
 });
