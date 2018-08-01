@@ -60,16 +60,21 @@ app.get('/paraToldo',function(req, res){
 app.get('/estadoToldo',function(req, res){
     var estado="desconocido";
     console.log("estadoToldo");
-    portArduino.write('estadoToldo\n', function(err) {
-        if (err) {
-            return console.log('Error on write: ', err.message);
-        }
-        port.on('readable', function () {
-            estado=port.read();
-            console.log("Estado toldo: "+estado);
+    var promise = new Promise(function(resolve, reject) {
+        portArduino.write('estadoToldo\n', function(err) {
+            if (err) {
+                return console.log('Error on write: ', err.message);
+            }
+            port.on('readable', function () {
+                estado=port.read();
+                console.log("Estado toldo: "+estado);
+            });
         });
     });
-    res.json({resp:"Enviada orden estadoToldo"});
+    promise.done(function(result){
+        res.json({resp:"Enviada orden estadoToldo"});
+    });
+    
  
 });
 

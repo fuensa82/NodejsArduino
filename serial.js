@@ -6,15 +6,10 @@ var delimitadorComandoArduino="*";
 
 console.log("Ejecutando");
 var primeraEjecucion=true;
-//Parte comunicacion serial con Arduino (inicializaciones)
-/*var portArduino = new serialport('COM4', {
-    baudrate: 9600,
-    parser: serialport.parsers.Read
-});*/
 
 //var portArduino = new serialport("/dev/ttyACM0", {
 var portArduino = new serialport("COM4", {
-    autoOpen: true,
+    autoOpen: false,
     baudRate:9600
 });
 
@@ -25,19 +20,21 @@ const parser = new parsers.Readline({
     delimiter: '\n'
 });
 
-//parser: serialport.parsers.readline("\n")
+
 portArduino.pipe(parser);
 
-// Switches the port into "flowing mode"
+
 var lectura="";
-portArduino.on('data', function (data) {
+/*portArduino.on('data', function (data) {
     leerBuffer(data, delimitadorComandoArduino,acciones);
-});
+});*/
 
 function leerBuffer(data, delimitadorComandoArduino,acciones){
     data=data.toString();
-    if(data.substring(data.length-1) ==delimitadorComandoArduino){
-        lectura+=data.substring(0,data.length-1);
+    var n=data.indexOf(delimitadorComandoArduino);
+    console.log("leerBuffer: "+data+" -- "+n);
+    if(n != -1){
+        lectura+=data.substring(0,n);
         acciones(lectura);
         lectura="";
     }else{
@@ -45,9 +42,7 @@ function leerBuffer(data, delimitadorComandoArduino,acciones){
     }
 }
 
-function acciones(lectura){
-    console.log("Datos leidos: "+lectura);
-}
+
 
 // Read data that is available but keep the stream from entering "flowing mode"
 /*portArduino.on('readable', function () {
@@ -64,17 +59,6 @@ portArduino.write('on', function(err) {
 
 
 //Servidor web
-/*
-var server = http.createServer(function(request, response){
-    console.log("Peticion Recibida.");
-    response.writeHead(200, {"Content-Type": "text/html"});
-    response.write("Hola Mundo");
-    response.end();
-});
-server.listen(8080);
- 
-console.log("Servidor funcionando en http://localhost:8080/");
-*/
 var app = express();
 
 //app.use(express.bodyParser());
@@ -100,6 +84,29 @@ app.get('/quitaToldo',function(req, res){
         console.log('message written on');
     });
     res.json({resp:"Enviada orden de quitado"});
+});
+app.get('/estadoToldo',function(req, res){
+    portArduino.open(function(){
+        var promise = new Promise(function(resolve, reject) {
+            portArduino.on('data', function (data) {
+                console.log("Hay datos en buffer: "+data);
+                leerBuffer(data, delimitadorComandoArduino,function(lectura){
+                    console.log("FIN Ya se han leido los datos: "+lectura);
+                    resolve(lectura);
+                });
+            });
+        });
+
+        portArduino.write('on\n', function(err) {
+            if (err) {
+                return console.log('Error on write: ', err.message);
+            }
+            promise.then(function(lectura){
+                portArduino.close();
+                res.json({resp:lectura});
+            })
+        });
+    });
 });
 
 
